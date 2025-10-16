@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lernspiel: Erziehung & Erziehungsziele</title>
+  <style>
+    :root{
+      --brand:#3b82f6; --brand-600:#2563eb; --ok:#10b981; --bad:#ef4444;
+      --bg:#f5f7fa; --card:#fff; --muted:#6b7280; --border:#d1d5db;
+    }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);margin:0;color:#111827}
+    header{background:var(--brand);color:#fff;text-align:center;padding:14px 12px;font-weight:700}
+    .tabs{display:flex;justify-content:center;gap:10px;background:#e5e7eb;padding:10px}
+    .tab{padding:10px 16px;border-radius:999px;background:#d1d5db;font-weight:700;cursor:pointer;user-select:none}
+    .tab.active{background:var(--brand);color:#fff}
+    .container{max-width:760px;margin:16px auto;background:var(--card);border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:18px}
+    h2{margin:0 0 10px}
+    .center{text-align:center}
+    .muted{color:var(--muted)}
+    .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .btn{padding:10px 14px;border-radius:10px;border:2px solid var(--border);background:#fff;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--brand);color:#fff;border-color:transparent}
+    .btn.primary:hover{background:var(--brand-600)}
+    .btn.ghost{background:#fff}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .option{display:block;width:100%;text-align:left;border:2px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;background:#f9fafb;cursor:pointer;font-size:1rem}
+    .option:hover{border-color:var(--brand)}
+    .correct{border-color:var(--ok)!important;background:#ecfdf5!important}
+    .wrong{border-color:var(--bad)!important;background:#fef2f2!important}
+    .hidden{display:none}
+    /* Spalten fürs Zuordnen */
+    .cols{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+    .col{flex:1;min-width:270px}
+    .pill{display:inline-block;background:#eef2ff;color:#3730a3;border-radius:999px;padding:4px 10px;font-size:.85rem;font-weight:700}
+  </style>
+</head>
+<body>
+<header>🎓 Lernspiel: Erziehung & Erziehungsziele</header>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" id="quizTab">🎯 Quiz</div>
+  <div class="tab" id="matchTab">🧩 Zuordnen</div>
+</div>
+
+<!-- QUIZ -->
+<div class="container" id="quizContainer">
+  <div class="row" style="justify-content:space-between">
+    <div class="pill">Kapitel: Definitionen · Prozess · Direkt/Indirekt · Ziele · Mündigkeit · Anlage/Umwelt · Prinzipien</div>
+  </div>
+  <h2 id="questionTitle"></h2>
+  <div id="options"></div>
+  <div id="feedback" class="center" style="min-height:24px"></div>
+  <div class="row" style="margin-top:6px">
+    <button id="nextBtn" class="btn primary">Weiter</button>
+    <button id="resetBtn" class="btn">Neu starten / mischen</button>
+  </div>
+  <p class="center muted" id="scoreText"></p>
+</div>
+
+<!-- ZUORDNEN -->
+<div class="container hidden" id="matchContainer">
+  <div class="row" style="justify-content:space-between">
+    <div class="pill">Begriffe ↔ Definitionen</div>
+    <button id="matchResetBtn" class="btn">Neu starten / mischen</button>
+  </div>
+  <h2>🧩 Zuordnungs-Spiel</h2>
+  <p class="center muted" style="margin-top:-4px">Tipp: erst links einen Begriff auswählen, dann rechts die passende Definition tippen.</p>
+  <div class="cols">
+    <div class="col" id="leftCol"></div>
+    <div class="col" id="rightCol"></div>
+  </div>
+  <div id="matchResult" class="center" style="margin-top:10px;font-weight:800"></div>
+</div>
+
+<!-- LOGIK -->
+<script>
+/* -------------------------- QUIZ mit Varianten -------------------------- */
+const quizBank = [
+  { variants:["Was bedeutet Erziehung?","Wie lässt sich Erziehung definieren?","Worum geht es bei Erziehung im Kern?"],
+    options:[
+      {t:"Kinder völlig frei entscheiden lassen",correct:false},
+      {t:"Soziales Handeln zur zielgerichteten Veränderung von Verhalten/Erleben",correct:true},
+      {t:"Belohnung/Bestrafung ohne pädagogisches Ziel",correct:false}
+    ]},
+  { variants:["Wofür steht das ‚Ziehen‘ im Begriff Erziehung?","Was deutet das Wortteil ‚-ziehung‘ an?","Welche Bedeutung hat das ‚Ziehen‘ in ‚Erziehung‘?"],
+    options:[
+      {t:"Körperliches Ziehen",correct:false},
+      {t:"Lenkung in eine bestimmte Richtung (bewusster Eingriff)",correct:true},
+      {t:"Manipulation ohne Legitimation",correct:false}
+    ]},
+  { variants:["Wer ist im Erziehungsprozess der Erzieher?","Wer übernimmt die erzieherische Rolle?","Wer handelt bewusst erzieherisch?"],
+    options:[
+      {t:"Die Person, die zufällig Einfluss nimmt",correct:false},
+      {t:"Die Person, die bewusst und absichtsvoll erzieherisch handelt",correct:true},
+      {t:"Das Kind selbst",correct:false}
+    ]},
+  { variants:["Was ist eine Erziehungsmaßnahme?","Wie nennt man eine konkrete Handlung im Erziehungsprozess?","Wofür steht der Begriff ‚Erziehungsmaßnahme‘?"],
+    options:[
+      {t:"Spontane Laune",correct:false},
+      {t:"Konkrete Handlung mit Erziehungsabsicht (z. B. Lob, Erklärung, Grenze)",correct:true},
+      {t:"Ziel ohne Umsetzung",correct:false}
+    ]},
+  { variants:["Direkte vs. indirekte Erziehung – was stimmt?","Wie unterscheiden sich direkte und indirekte Erziehung?","Welche Aussage passt zu direkter/indirekter Erziehung?"],
+    options:[
+      {t:"Direkt = Kommunikation; Indirekt = Umfeldgestaltung",correct:true},
+      {t:"Direkt = Strafe; Indirekt = Lob",correct:false},
+      {t:"Direkt = unbewusst; Indirekt = zufällig",correct:false}
+    ]},
+  { variants:["Zentrales Erziehungsziel?","Welches Ziel gilt als übergreifend?","Leitbild der Erziehung?"],
+    options:[
+      {t:"Gehorsam",correct:false},
+      {t:"Mündigkeit",correct:true},
+      {t:"Disziplin",correct:false}
+    ]},
+  { variants:["Welche Kompetenzen umfasst Mündigkeit?","Wodurch zeigt sich Mündigkeit?","Welche drei Kompetenzbereiche gehören zur Mündigkeit?"],
+    options:[
+      {t:"Selbst-, Sach- und Sozialkompetenz",correct:true},
+      {t:"Rechen- und Merkkompetenz",correct:false},
+      {t:"Leistungs- und Gehorsamskompetenz",correct:false}
+    ]},
+  { variants:["Was besagt die Umwelttheorie?","Welche Aussage beschreibt die Umwelttheorie?","Wie sieht die Umwelttheorie das Kind?"],
+    options:[
+      {t:"Alles ist angeboren",correct:false},
+      {t:"Kind ist wie ein ‚leeres Blatt‘; Umwelt prägt",correct:true},
+      {t:"Nur Selbststeuerung zählt",correct:false}
+    ]},
+  { variants:["Was besagt die Anlagetheorie?","Welche Aussage beschreibt die Anlagetheorie?","Wie erklärt die Anlagetheorie Entwicklung?"],
+    options:[
+      {t:"Alles ist im Kind bereits angelegt und entfaltet sich",correct:true},
+      {t:"Nur die Umwelt formt",correct:false},
+      {t:"Erziehung spielt keine Rolle",correct:false}
+    ]},
+  { variants:["Heutige Sicht auf Entwicklung?","Welche Sichtweise gilt heute?","Wie erklärt man Entwicklung heute?"],
+    options:[
+      {t:"Nur Anlage",correct:false},
+      {t:"Nur Umwelt",correct:false},
+      {t:"Anlage × Umwelt × Selbststeuerung (Wechselwirkung)",correct:true}
+    ]},
+  { variants:["Woran muss sich pädagogisches Handeln orientieren?","Was gilt für pädagogisches Handeln?","Worauf stützt sich professionelles Erziehen?"],
+    options:[
+      {t:"An klaren Erziehungszielen",correct:true},
+      {t:"An spontanen Gefühlen",correct:false},
+      {t:"An Machtausübung",correct:false}
+    ]},
+  { variants:["Was darf Erziehung nicht sein?","Was ist zu vermeiden?","Wovor warnt man bzgl. Macht in der Erziehung?"],
+    options:[
+      {t:"Manipulation/Machtmissbrauch",correct:true},
+      {t:"Zielorientierung",correct:false},
+      {t:"Förderung",correct:false}
+    ]},
+  { variants:["Beispiel für direkte Erziehung?","Welche Handlung ist direkte Erziehung?","Typisches Beispiel für direkte Erziehung?"],
+    options:[
+      {t:"Auswahl von Bildungssendungen",correct:false},
+      {t:"Loben beim Mittagessen",correct:true},
+      {t:"Raumgestaltung",correct:false}
+    ]},
+  { variants:["Beispiel für indirekte Erziehung?","Welche Maßnahme zählt zu indirekter Erziehung?","Typisches Beispiel für indirekte Erziehung?"],
+    options:[
+      {t:"Erklärendes Gespräch",correct:false},
+      {t:"Bewusste Auswahl einer Lerngruppe/Medien",correct:true},
+      {t:"Ermahnung am Tisch",correct:false}
+    ]}
+];
+
+function shuffle(a){ return [...a].sort(()=>Math.random()-0.5); }
+function buildQuizRun(){
+  return shuffle(quizBank.map(item=>{
+    const qText = item.variants[Math.floor(Math.random()*item.variants.length)];
+    const opts = shuffle(item.options);
+    const aIdx = opts.findIndex(o=>o.correct);
+    return { q:qText, o:opts.map(o=>o.t), a:aIdx };
+  }));
+}
+
+let quizData = buildQuizRun();
+let current = 0;
+let score = 0;
+
+const qTitle = document.getElementById('questionTitle');
+const optionsDiv = document.getElementById('options');
+const feedback = document.getElementById('feedback');
+const nextBtn = document.getElementById('nextBtn');
+const resetBtn = document.getElementById('resetBtn');
+const scoreText = document.getElementById('scoreText');
+
+function showQuestion(){
+  const q = quizData[current];
+  qTitle.textContent = `${current+1}. ${q.q}`;
+  optionsDiv.innerHTML = '';
+  feedback.textContent = '';
+  q.o.forEach((opt,i)=>{
+    const btn = document.createElement('button');
+    btn.className='option';
+    btn.textContent = opt;
+    btn.onclick = ()=>selectOption(i, btn);
+    optionsDiv.appendChild(btn);
+  });
+  scoreText.textContent = `Frage ${current+1} von ${quizData.length}`;
+  nextBtn.disabled = true;
+}
+function selectOption(i, btn){
+  const correct = quizData[current].a;
+  document.querySelectorAll('.option').forEach(b=>b.disabled=true);
+  if(i===correct){ btn.classList.add('correct'); feedback.textContent='✅ Richtig!'; score++; }
+  else{ btn.classList.add('wrong'); feedback.textContent='❌ Falsch!'; document.querySelectorAll('.option')[correct].classList.add('correct'); }
+  nextBtn.disabled = false;
+}
+function finishQuiz(){
+  qTitle.textContent='🎉 Geschafft!';
+  optionsDiv.innerHTML=''; feedback.textContent='';
+  scoreText.textContent = `Dein Ergebnis: ${score} von ${quizData.length} Punkten`;
+  nextBtn.style.display='none';
+}
+nextBtn.onclick = ()=>{ current++; (current<quizData.length)?showQuestion():finishQuiz(); };
+resetBtn.onclick = ()=>{
+  quizData = buildQuizRun(); current=0; score=0; nextBtn.style.display='inline-block'; showQuestion();
+};
+showQuestion();
+
+/* ---------------------- ZUORDNEN mit Varianten ---------------------- */
+const matchSource = {
+  "Erziehung":[
+    "Soziales Handeln, um Verhalten und Erleben gezielt zu verändern.",
+    "Geplantes pädagogisches Handeln zur Veränderung von Verhalten/Erleben.",
+    "Bewusster Einfluss auf Entwicklung im Sinne gesetzter Ziele."
+  ],
+  "Erzieher":[
+    "Person, die bewusst und absichtsvoll erzieherisch handelt.",
+    "Pädagogisch verantwortliche Person, die Maßnahmen einsetzt.",
+    "Der aktiv Handelnde im Erziehungsprozess."
+  ],
+  "Zu Erziehender":[
+    "Kind/Lernender, dessen Verhalten/Erleben verändert werden soll.",
+    "Adressat pädagogischer Maßnahmen und Begleitung.",
+    "Die Person, die in ihrer Entwicklung unterstützt wird."
+  ],
+  "Erziehungsmaßnahme":[
+    "Konkrete Handlung (z. B. loben, erklären, Grenzen setzen).",
+    "Gezielte pädagogische Intervention im Alltag.",
+    "Einzelhandlung im Erziehungsprozess mit Absicht."
+  ],
+  "Direkte Erziehung":[
+    "Direkter Umgang/Kommunikation mit dem Kind.",
+    "Unmittelbare Interaktion (z. B. Lob, Erklärung).",
+    "Erziehung im direkten Kontakt."
+  ],
+  "Indirekte Erziehung":[
+    "Gestaltung des Umfelds (Raum, Materialien, Gruppe, Medien).",
+    "Einfluss über Rahmenbedingungen und Lebenswelt.",
+    "Pädagogische Wirkung durch Umgebungs- und Sozialgestaltung."
+  ],
+  "Erziehungsziel":[
+    "Bewusst gesetzter Soll-Zustand (Werte/Normen).",
+    "Zielvorstellung über gewünschtes Verhalten jetzt und künftig.",
+    "Orientierung für pädagogisches Handeln."
+  ],
+  "Mündigkeit":[
+    "Selbstbestimmung und Verantwortungsübernahme.",
+    "Sich seines Verstandes ohne Leitung eines anderen bedienen (Kant).",
+    "Fähigkeit, eigenständig und verantwortungsvoll zu handeln."
+  ],
+  "Selbstkompetenz":[
+    "Fähigkeit, eigenverantwortlich zu handeln.",
+    "Sich selbst steuern und Verantwortung übernehmen.",
+    "Selbstständigkeit im Handeln."
+  ],
+  "Sachkompetenz":[
+    "Mit Wissen und Fertigkeiten in Sachbereichen handeln.",
+    "Fachlich angemessen urteilen und arbeiten.",
+    "Kenntnisse/Fertigkeiten sachbezogen einsetzen."
+  ],
+  "Sozialkompetenz":[
+    "Soziale/politische Sachverhalte beurteilen; verantwortlich handeln.",
+    "Angemessene Zusammenarbeit und Rücksichtnahme.",
+    "Verantwortungsvolles Handeln in Gruppen/Gesellschaft."
+  ],
+  "Umwelttheorie":[
+    "Kind als ‚leeres Blatt‘ – Umwelt prägt wesentlich.",
+    "Entwicklung vor allem durch Umwelteinflüsse.",
+    "Primär Umwelt formt Verhalten/Erleben."
+  ],
+  "Anlagetheorie":[
+    "Alles ist im Kind angelegt und entfaltet sich.",
+    "Entwicklung basiert vorwiegend auf Anlage.",
+    "Genetische Dispositionen sind ausschlaggebend."
+  ],
+  "Heutige Sicht":[
+    "Anlage × Umwelt × Selbststeuerung (Wechselwirkung).",
+    "Entwicklung entsteht aus Zusammenspiel mehrerer Faktoren.",
+    "Interaktion von Anlage, Umwelt und Selbststeuerung."
+  ],
+  "Pädagogisches Handeln":[
+    "Soll immer an Erziehungszielen ausgerichtet sein.",
+    "Zielorientiertes, begründetes Handeln.",
+    "Handeln auf Basis klarer pädagogischer Ziele."
+  ],
+  "Erziehung & Macht":[
+    "Keine Manipulation, kein Machtmissbrauch.",
+    "Erziehung darf Macht nicht verschleiern.",
+    "Missbrauch von Macht ist zu vermeiden."
+  ]
+};
+function pickVariant(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function buildMatchRun(){
+  const entries = Object.keys(matchSource).map(term=>({term,def:pickVariant(matchSource[term])}));
+  const left = shuffle(entries), right = shuffle(entries);
+  return {left,right};
+}
+let {left:leftTerms,right:rightDefs} = buildMatchRun();
+let selectedLeft = null;
+let matched = [];
+
+const leftCol = document.getElementById('leftCol');
+const rightCol = document.getElementById('rightCol');
+const matchResult = document.getElementById('matchResult');
+const matchResetBtn = document.getElementById('matchResetBtn');
+
+function renderMatch(){
+  leftCol.innerHTML=''; rightCol.innerHTML=''; matchResult.textContent='';
+  leftTerms.forEach((l,i)=>{
+    const b=document.createElement('button');
+    b.className='option'; b.textContent=l.term;
+    b.disabled = matched.includes(l.term);
+    if(selectedLeft===i) b.style.background='#bfdbfe';
+    b.onclick=()=>{selectedLeft=i; renderMatch();};
+    leftCol.appendChild(b);
+  });
+  rightDefs.forEach((r,j)=>{
+    const b=document.createElement('button');
+    b.className='option'; b.textContent=r.def;
+    b.disabled = matched.includes(r.term);
+    b.onclick=()=>{
+      if(selectedLeft!==null){
+        if(leftTerms[selectedLeft].term===r.term){
+          matched.push(r.term);
+          matchResult.textContent='✅ Richtig zugeordnet!';
+        } else {
+          matchResult.textContent='❌ Falsch! Versuch es erneut.';
+        }
+        selectedLeft=null; renderMatch();
+      }
+    };
+    rightCol.appendChild(b);
+  });
+  if(matched.length===leftTerms.length){
+    matchResult.textContent='🎉 Alles richtig zugeordnet! Tipp auf „Neu starten / mischen“, um erneut zu üben.';
+  }
+}
+matchResetBtn.onclick=()=>{
+  ({left:leftTerms,right:rightDefs}=buildMatchRun());
+  selectedLeft=null; matched=[]; renderMatch();
+};
+renderMatch();
+
+/* ------------------------------ Tabs ------------------------------ */
+const quizTab = document.getElementById('quizTab');
+const matchTab = document.getElementById('matchTab');
+const quizContainer = document.getElementById('quizContainer');
+const matchContainer = document.getElementById('matchContainer');
+
+quizTab.onclick=()=>{
+  quizTab.classList.add('active'); matchTab.classList.remove('active');
+  quizContainer.classList.remove('hidden'); matchContainer.classList.add('hidden');
+};
+matchTab.onclick=()=>{
+  matchTab.classList.add('active'); quizTab.classList.remove('active');
+  matchContainer.classList.remove('hidden'); quizContainer.classList.add('hidden');
+};
+</script>
+</body>
+</html>
